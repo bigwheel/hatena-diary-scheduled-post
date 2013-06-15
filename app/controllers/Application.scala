@@ -30,7 +30,8 @@ object Application extends Controller {
       val maybeAccessToken = request.session.get("token")
       val maybeAccessTokenSecret = request.session.get("secret")
       if (maybeAccessToken == None || maybeAccessTokenSecret == None)
-        Ok("state: log out")
+        Ok(views.html.index("まだはてなにOAuthで認証していません。" +
+          "<a href='/auth' >OAuthで認証する</a>"))
       else
       {
         val accessToken: String = maybeAccessToken.get
