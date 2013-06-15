@@ -12,6 +12,7 @@ import scala.Left
 import scala.Right
 
 import libs.concurrent.Execution.Implicits._
+import play.api.libs.json.{JsObject, Json}
 
 object Application extends Controller {
 
@@ -45,7 +46,15 @@ object Application extends Controller {
         Async {
           WS.url(oauthCalculator.sign(url)).get().map {
             response =>
-              Ok(views.html.index(response.status + response.body))
+              val json = Json.parse(response.body)
+              val url_name = (json  \ "url_name").as[String]
+              val url = "http://d.hatena.ne.jp/" + url_name + "/atom/draft"
+              Async {
+                WS.url(oauthCalculator.sign(url)).get().map {
+                  response =>
+                    Ok(views.html.index((response.xml \\ "entry" \ "title").toList.map (_.text).mkString("<BR />")))
+                }
+              }
           }
         }
       }
@@ -106,6 +115,4 @@ object Application extends Controller {
       RequestToken(token, secret)
     }
   }
-
-
 }
