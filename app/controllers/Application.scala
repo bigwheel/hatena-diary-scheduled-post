@@ -15,13 +15,13 @@ import libs.concurrent.Execution.Implicits._
 
 object Application extends Controller {
 
-  //twitterでアプリケーションを登録した時に取得する値
+  //HATENAでアプリケーションを登録した時に取得する値
   //動かす時はここに入力してください。
   val consumerKey = "Edjoo/C3KlnfFg=="
   val consumerSecret = "gAodYewEZZ133SFtAaf059qfHro="
 
   /*
-   * indexページ。ログイン、ログアウトのメニューと、twitter apiから情報を取得した結果を表示する。
+   * indexページ。ログイン、ログアウトのメニューと、HATENA apiから情報を取得した結果を表示する。
    */
   def index = Action {
     request => {
@@ -56,11 +56,14 @@ object Application extends Controller {
       val oauthCalculator = OAuthCalculator(ConsumerKey(consumerKey, consumerSecret), RequestToken(accessToken, accessTokenSecret))
 
       //タイムラインの取得
-      val url = "https://api.twitter.com/1.1/statuses/home_timeline.json"
+      val url = "http://n.hatena.com/applications/my.json"
       Async {
-        WS.url(url).sign(oauthCalculator).get().map {
+        //val a = WS.url(url).sign(oauthCalculator)
+        val a = WS.url(oauthCalculator.sign(url)).withHeaders()
+        println(a)
+        a.get().map {
           response =>
-            Ok(views.html.index(response.body))
+            Ok(views.html.index(response.status + response.body))
         }
       }
 
@@ -76,16 +79,16 @@ object Application extends Controller {
   }
 
   /*
-   * twitter認証系のテスト
+   * HATENA認証系のテスト
    * ここからほぼコピーしています　https://github.com/playframework-ja/Play20/wiki/ScalaOAuth
    */
   val KEY = ConsumerKey(consumerKey, consumerSecret)
 
-  val TWITTER = OAuth(ServiceInfo(
-    "https://www.hatena.com/oauth/initiate",
+  val HATENA = OAuth(ServiceInfo(
+    "https://www.hatena.com/oauth/initiate?scope=read_public,write_public,read_private,write_private",
     "https://www.hatena.com/oauth/token",
     "https://www.hatena.ne.jp/oauth/authorize", KEY),
-    false)
+    true)
 
   def authenticate = Action {
     request =>
@@ -94,7 +97,7 @@ object Application extends Controller {
           val tokenPair = sessionTokenPair(request).get
           // We got the verifier; now get the access token, store it and back to index
           println("認証されました。アクセストークンを取得し、保存し、indexに戻ります")
-          TWITTER.retrieveAccessToken(tokenPair, verifier) match {
+          HATENA.retrieveAccessToken(tokenPair, verifier) match {
             case Right(t) => {
               // We received the authorized tokens in the OAuth object - store it before we proceed
               println("Oauthオブジェクトからアクセストークンを受け取りました。それを保存します。")
@@ -103,12 +106,12 @@ object Application extends Controller {
             case Left(e) => throw e
           }
       }.getOrElse(
-        TWITTER.retrieveRequestToken("http://localhost:9000/auth") match {
+        HATENA.retrieveRequestToken("http://localhost:9000/auth") match {
           //コールバックURL
           case Right(t) => {
             // We received the unauthorized tokens in the OAuth object - store it before we proceed
             println("認証されてないトークンを受け取りました。それを保存します。")
-            Redirect(TWITTER.redirectUrl(t.token)).withSession("token" -> t.token, "secret" -> t.secret)
+            Redirect(HATENA.redirectUrl(t.token)).withSession("token" -> t.token, "secret" -> t.secret)
           }
           case Left(e) => throw e
         })
