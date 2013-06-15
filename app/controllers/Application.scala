@@ -58,10 +58,7 @@ object Application extends Controller {
       //タイムラインの取得
       val url = "http://n.hatena.com/applications/my.json"
       Async {
-        //val a = WS.url(url).sign(oauthCalculator)
-        val a = WS.url(oauthCalculator.sign(url)).withHeaders()
-        println(a)
-        a.get().map {
+        WS.url(oauthCalculator.sign(url)).get().map {
           response =>
             Ok(views.html.index(response.status + response.body))
         }
