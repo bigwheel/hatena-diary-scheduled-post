@@ -34,11 +34,11 @@ object Application extends Controller {
           "<a href='/auth' >OAuthで認証する</a>"))
       else
       {
-        val accessToken: String = maybeAccessToken.get
-        val accessTokenSecret: String = maybeAccessTokenSecret.get
-
         //認証情報の作成
-        val oauthCalculator = OAuthCalculator(ConsumerKey(consumerKey, consumerSecret), RequestToken(accessToken, accessTokenSecret))
+        val oauthCalculator = OAuthCalculator(
+          ConsumerKey(consumerKey, consumerSecret),
+          RequestToken(maybeAccessToken.get, maybeAccessTokenSecret.get)
+        )
 
         // プロフィール情報の取得
         val url = "http://n.hatena.com/applications/my.json"
