@@ -87,7 +87,7 @@ object Application extends Controller {
             case Left(e) => throw e
           }
       }.getOrElse(
-        HATENA.retrieveRequestToken(request.headers("Host") + "/auth") match {
+        HATENA.retrieveRequestToken("http://" + request.host + "/auth") match {
           //コールバックURL
           case Right(t) => {
             // We received the unauthorized tokens in the OAuth object - store it before we proceed
