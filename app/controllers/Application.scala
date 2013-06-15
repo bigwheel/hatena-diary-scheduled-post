@@ -22,50 +22,33 @@ object Application extends Controller {
 
   /*
    * indexページ。ログイン、ログアウトのメニューと、HATENA apiから情報を取得した結果を表示する。
+   * TODO: そもそもトークンの中身をセッションとして持つのは微妙なので直せ
    */
   def index = Action {
     request => {
 
-      //セッションの中身の確認
-      val accessToken = request.session.get("token").map {
-        token =>
-          println("token : " + token)
-          token
-      }.getOrElse {
-        println("cannot take token")
-        ""
-      }
-      val accessTokenSecret = request.session.get("secret").map {
-        secret =>
-          println("secret : " + secret)
-          secret
-      }.getOrElse {
-        println("cannot take secret")
-        ""
-      }
+      val maybeAccessToken = request.session.get("token")
+      val maybeAccessTokenSecret = request.session.get("secret")
+      if (maybeAccessToken == None || maybeAccessTokenSecret == None)
+        Ok("state: log out")
+      else
+      {
+        val accessToken: String = maybeAccessToken.get
+        val accessTokenSecret: String = maybeAccessTokenSecret.get
 
-      //ログイン判定
-      // TODO こんな方法はダメなのでは。
-      if (!(accessToken == "" && accessTokenSecret == "")) {
-        println("log inning")
-      } else {
-        println("log outing")
-      }
+        //認証情報の作成
+        val oauthCalculator = OAuthCalculator(ConsumerKey(consumerKey, consumerSecret), RequestToken(accessToken, accessTokenSecret))
 
-      //認証情報の作成
-      val oauthCalculator = OAuthCalculator(ConsumerKey(consumerKey, consumerSecret), RequestToken(accessToken, accessTokenSecret))
-
-      //タイムラインの取得
-      val url = "http://n.hatena.com/applications/my.json"
-      Async {
-        WS.url(oauthCalculator.sign(url)).get().map {
-          response =>
-            Ok(views.html.index(response.status + response.body))
+        // プロフィール情報の取得
+        val url = "http://n.hatena.com/applications/my.json"
+        Async {
+          WS.url(oauthCalculator.sign(url)).get().map {
+            response =>
+              Ok(views.html.index(response.status + response.body))
+          }
         }
       }
-
     }
-
   }
 
   /*
