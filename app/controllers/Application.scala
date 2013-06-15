@@ -52,7 +52,16 @@ object Application extends Controller {
               Async {
                 WS.url(oauthCalculator.sign(url)).get().map {
                   response =>
-                    Ok(views.html.index((response.xml \\ "entry" \ "title").toList.map (_.text).mkString("<BR />")))
+                    val result = (response.xml \\ "entry").toList.map (
+                      entry => {
+                        val url = (entry \ "link" \ "@href").toString
+                        val matches = "http://d\\.hatena\\.ne\\.jp/(.+)/atom/draft/(\\d+)".r.findFirstMatchIn(url)
+                        val url_name = matches.get.group(1)
+                        val article_id = matches.get.group(2)
+                        "<a href='" + "http://d.hatena.ne.jp/" + url_name + "/draft?epoch=" + article_id + "'>" + (entry \ "title").text + "</a>"
+                      }
+                    )
+                      Ok(views.html.index(result.mkString("<BR />")))
                 }
               }
           }
