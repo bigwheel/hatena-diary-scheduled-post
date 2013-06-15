@@ -21,6 +21,22 @@ object Application extends Controller {
   val consumerKey = "Edjoo/C3KlnfFg=="
   val consumerSecret = "gAodYewEZZ133SFtAaf059qfHro="
 
+  def requestTokenFromSession(request: Request[AnyContent]): Option[RequestToken] = {
+    val maybeAccessToken = request.session.get("token")
+    val maybeAccessTokenSecret = request.session.get("secret")
+
+    if (maybeAccessToken == None || maybeAccessTokenSecret == None)
+      None
+    else
+      Some(RequestToken(maybeAccessToken.get, maybeAccessTokenSecret.get))
+  }
+
+  def getOauthCalculator(request: Request[AnyContent]) = OAuthCalculator(
+    ConsumerKey(consumerKey, consumerSecret),
+    requestTokenFromSession(request).get
+  )
+
+
   /*
    * indexページ。ログイン、ログアウトのメニューと、HATENA apiから情報を取得した結果を表示する。
    * TODO: そもそもトークンの中身をセッションとして持つのは微妙なので直せ
@@ -28,18 +44,14 @@ object Application extends Controller {
   def index = Action {
     request => {
 
-      val maybeAccessToken = request.session.get("token")
-      val maybeAccessTokenSecret = request.session.get("secret")
-      if (maybeAccessToken == None || maybeAccessTokenSecret == None)
+      val maybeRequestToken = requestTokenFromSession(request)
+      if (maybeRequestToken == None)
         Ok(views.html.index("まだはてなにOAuthで認証していません。" +
           "<a href='/auth' >OAuthで認証する</a>"))
       else
       {
         //認証情報の作成
-        val oauthCalculator = OAuthCalculator(
-          ConsumerKey(consumerKey, consumerSecret),
-          RequestToken(maybeAccessToken.get, maybeAccessTokenSecret.get)
-        )
+        val oauthCalculator = getOauthCalculator(request)
 
         // プロフィール情報の取得
         val url = "http://n.hatena.com/applications/my.json"
@@ -65,6 +77,18 @@ object Application extends Controller {
                 }
               }
           }
+        }
+      }
+    }
+  }
+
+  def post(url_name: String, article_id: Int) = Action {
+    request => {
+      val url = "http://d.hatena.ne.jp/" + url_name + "/atom/draft/" + article_id.toString
+      Async {
+        WS.url(getOauthCalculator(request).sign(url)).withHeaders("X-HATENA-PUBLISH" -> "1").put(Results.EmptyContent()).map {
+          response =>
+            Ok(response.status + response.body + url)
         }
       }
     }
